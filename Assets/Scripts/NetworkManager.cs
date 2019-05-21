@@ -7,7 +7,8 @@ using System.Net;
 
 public class NetworkManager : MonoBehaviour
 {
-
+    [SerializeField]
+    private GameObject player;
     [SerializeField]
     int udpPort = 9082;
     [SerializeField]
@@ -16,17 +17,6 @@ public class NetworkManager : MonoBehaviour
     WaitForSeconds UdpDelay = new WaitForSeconds(0.3f);
     IPEndPoint UdpEndPoint = null;
     UdpClient client = null;
-
-    [System.Serializable]
-    public class JsonObject : System.Object
-    {
-        public string[] values;
-
-        public JsonObject(string[] array)
-        {
-            values = array;
-        }
-    }
 
     public void UdpConnect()
     {
@@ -41,7 +31,11 @@ public class NetworkManager : MonoBehaviour
     void ParseDataToJson(byte[] data)
     {
         string JsonString = encoding.GetString(data);
-        JsonObject Json = JsonUtility.FromJson<JsonObject>(JsonString);
+        JSONObject j = new JSONObject(JsonString);
+        if(j["ACTION"].str == "SPAWN_PLAYER")
+        {
+            Instantiate(player, Vector3.up * 10f, Quaternion.identity);
+        }
     }
 
     IEnumerator ReceiveData()
@@ -62,8 +56,10 @@ public class NetworkManager : MonoBehaviour
 
     public void SendCommand(params string[] values)
     {
-        JsonObject Json = new JsonObject(values);
-        string Jsonstring = JsonUtility.ToJson(Json);
+        JSONObject j = new JSONObject(JSONObject.Type.OBJECT);
+        j.AddField("ACTION", "REGISTER");
+        j.AddField("NAME", "Runewather");
+        string Jsonstring = j.Print(true);
         byte[] data = encoding.GetBytes(Jsonstring);
         client.Send(data, data.Length, host, udpPort);
     }
@@ -72,5 +68,6 @@ public class NetworkManager : MonoBehaviour
     {        
         UdpConnect();
         StartCoroutine(ReceiveData());
+        SendCommand();
     }
 }
